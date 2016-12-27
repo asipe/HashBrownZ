@@ -36,13 +36,12 @@ Function Get-HBZS3FileMultipartMD5Hash {
 
   $strm = [System.IO.File]::Open($path, 'Open', 'Read', 'ReadWrite')
   try {
-    $pos = 0
     $streamLength = $strm.Length
-    while (($bytesRead = $strm.Read($buf, $pos, $buf.Length - $pos)) -ne 0) {
+    while (($bytesRead = $strm.Read($buf, 0, $buf.Length)) -ne 0) {
       if (($strm.Position -ne $streamLength) -and ($bytesRead -ne $buf.Length)) {
-        $pos = $bytesRead 
+        throw 'Unable to read entire part buffer from stream'
       } else {
-        $binaryHash += $md5Algorithm.ComputeHash($buf, 0, $bytesRead + $pos)
+        $binaryHash += $md5Algorithm.ComputeHash($buf, 0, $bytesRead)
         $parts = $parts + 1
       }
     }
