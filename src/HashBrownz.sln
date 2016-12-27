@@ -7,6 +7,11 @@ Project("{F5034706-568F-408A-B7B3-4D38C6DB8A32}") = "HashBrownz", "HashBrownz\Ha
 EndProject
 Project("{F5034706-568F-408A-B7B3-4D38C6DB8A32}") = "HashBrownz.Tests", "HashBrownz.Tests\HashBrownz.Tests.pssproj", "{B3830424-A7E7-4B95-B772-70F9A494609D}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "License", "License", "{7440B37E-D912-494B-8D75-B9D54DB96F58}"
+	ProjectSection(SolutionItems) = preProject
+		..\LICENSE = ..\LICENSE
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
