@@ -40,7 +40,6 @@ Function Get-HBZS3FileMultipartMD5Hash {
     $streamLength = $strm.Length
     while (($bytesRead = $strm.Read($buf, $pos, $buf.Length - $pos)) -ne 0) {
       if (($strm.Position -ne $streamLength) -and ($bytesRead -ne $buf.Length)) {
-        Write-Host 'hi'
         $pos = $bytesRead 
       } else {
         $binaryHash += $md5Algorithm.ComputeHash($buf, 0, $bytesRead + $pos)
