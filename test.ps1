@@ -1,0 +1,1 @@
+.\src\HashBrownz.Tests\HashBrownz.tests.ps1
