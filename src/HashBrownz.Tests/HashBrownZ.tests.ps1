@@ -100,7 +100,8 @@ Describe 'ConvertFrom-HBZS3FileMultipartETag' {
 InModuleScope HashBrownz {
   Describe 'Get-HBZS3FileMultipartMD5HashPossiblePartSize' {
     Context 'usage' {
-      @(@{FileLength = 1; Parts = 1; Increment = 1048576; Expected = @(1048576) },
+      @(@{FileLength = 0; Parts = 1; Increment = 1048576; Expected = @() },
+        @{FileLength = 1; Parts = 1; Increment = 1048576; Expected = @(1048576) },
         @{FileLength = 1; Parts = 1; Increment = 1; Expected = @(1) },
         @{FileLength = 200; Parts = 100; Increment = 1; Expected = @(2) },
         @{FileLength = 200; Parts = 100; Increment = 2; Expected = @(2) },
