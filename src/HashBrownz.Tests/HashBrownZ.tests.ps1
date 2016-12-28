@@ -77,6 +77,26 @@ Describe 'Get-HBZS3FileMultipartMD5Hash' {
   }
 }
 
+Describe 'ConvertFrom-HBZS3FileMultipartETag' {
+  Context 'usage' {
+    It 'returns details with a single digit part size' {
+      $result = ConvertFrom-HBZS3FileMultipartETag -ETag 'hash-3' 
+      $result.Hash | Should Be 'hash'
+      $result.Parts | Should Be 3
+    }
+
+    It 'returns details multiple digit part size' {
+      $result = ConvertFrom-HBZS3FileMultipartETag 'hash-345' 
+      $result.Hash | Should Be 'hash'
+      $result.Parts | Should Be 345
+    }
+
+    It 'throws if not in correct format' {
+      { ConvertFrom-HBZS3FileMultipartETag 'hash' } | Should Throw 'Invalid Format'
+    }
+  }
+}
+
 Describe 'Get-HBZS3FileMultipartMD5HashPartSize' {
   Context 'usage' {
     @(@('hello world', 'HASH-1', 1, 11),

@@ -56,15 +56,33 @@ Function Get-HBZS3FileMultipartMD5Hash {
   '{0}-{1}' -f $hash,$parts | Write-Output
 }
 
+Function ConvertFrom-HBZS3FileMultipartETag {
+  [CmdletBinding()]
+  Param([Parameter(Mandatory=$true)] [string]$etag) 
+
+  $parts = $etag -split '-'
+
+  if ($parts.Length -ne 2) {
+    throw 'Invalid Format'
+  }
+
+  $result = [pscustomobject]@{
+    Hash = $parts[0]
+    Parts = $parts[1]
+  }
+
+  $result | Write-Output
+}
+
 Function Get-HBZS3FileMultipartMD5HashPartSize {
   [CmdletBinding()]
   Param([Parameter(Mandatory=$true)] [string]$path,
         [Parameter(Mandatory=$true)] [string]$etag,
         [Parameter(Mandatory=$false)] [int]$partSizeIncrementBytes = $bytesInAMB)
 
-  $parts = [int]($etag -split '-')[1]
+  $etagDetails = ConvertFrom-HBZS3FileMultipartETag -etag $etag
   $file = Get-ChildItem -LiteralPath $path
-  (([Math]::Ceiling(($file.Length / $parts) / $partSizeIncrementBytes)) * $partSizeIncrementBytes) | Write-Output
+  (([Math]::Ceiling(($file.Length / $etagDetails.Parts) / $partSizeIncrementBytes)) * $partSizeIncrementBytes) | Write-Output
 }
 
 Export-ModuleMember -Function *
