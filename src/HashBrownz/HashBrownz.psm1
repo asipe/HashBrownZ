@@ -106,4 +106,11 @@ Function Get-HBZS3FileMultipartMD5HashPossiblePartSize {
   }
 }
 
+Function Test-HBZIsS3FileMultipartETag {
+  [CmdletBinding()]
+  Param([Parameter(Mandatory=$true)] $etag) 
+
+  $etag -match '-' | Write-Output
+}
+
 Export-ModuleMember -Function *

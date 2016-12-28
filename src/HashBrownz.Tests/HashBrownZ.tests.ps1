@@ -137,3 +137,15 @@ InModuleScope HashBrownz {
     }
   }
 }
+
+Describe 'Test-HBZIsS3FileMultipartETag' {
+  Context 'usage' {
+    It 'returns true if etag is in s3 multipart format' {
+      Test-HBZIsS3FileMultipartETag -ETag 'HASH-1' | Should Be $true
+    }
+
+    It 'returns false if etag is not in s3 multiepart format' {
+      Test-HBZIsS3FileMultipartETag -ETag 'HASH' | Should Be $false
+    }
+  }
+}
