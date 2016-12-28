@@ -79,18 +79,27 @@ Describe 'Get-HBZS3FileMultipartMD5Hash' {
 
 Describe 'Get-HBZS3FileMultipartMD5HashPartSize' {
   Context 'usage' {
-    @(@('hello world', 'HASH-1', 11),
-      @('hello world', 'HASH-3', 4),
-      @('hello world hello world', 'HASH-3', 8),
-      @('012345678901234567890123456789', 'HASH-3', 10),
-      @('0123456789012345678901234567890', 'HASH-3', 11),
-      @('012345678901234567890123456789', 'HASH-4', 8),
-      @('0123456789012345678901234567890', 'HASH-4', 8)) | 
+    @(@('hello world', 'HASH-1', 1, 11),
+      @('hello world', 'HASH-3', 1, 4),
+      @('hello world hello world', 'HASH-3', 1, 8),
+      @('012345678901234567890123456789', 'HASH-3', 1, 10),
+      @('0123456789012345678901234567890', 'HASH-3', 1, 11),
+      @('012345678901234567890123456789', 'HASH-4', 1, 8),
+      @('0123456789012345678901234567890', 'HASH-4', 1, 8),
+      @('0123456789012345678901234567890', 'HASH-4', 2, 8),
+      @('0123456789012345678901234567890', 'HASH-4', 3, 9),
+      @('0123456789012345678901234567890', 'HASH-4', 4, 8),
+      @('0123456789012345678901234567890', 'HASH-4', 5, 10)) |
       ForEach-Object {
         It 'returns the part size in bytes for a file and etag' {
           $path = Set-TestFileContent -Contents $_[0]
-          Get-HBZS3FileMultipartMD5HashPartSize -Path $path -ETag $_[1] | Should Be $_[2]
+          Get-HBZS3FileMultipartMD5HashPartSize -Path $path -ETag $_[1] -PartSizeIncrementBytes $_[2] | Should Be $_[3]
         }
       }
+
+    It 'uses a default partSizeIncrementBytes of 1 MB' {
+      $path = Set-TestFileContent -Contents 'hello world'
+      Get-HBZS3FileMultipartMD5HashPartSize -Path $path -ETag 'HASH-1' | Should Be (1024 * 1024)
+    }
   }
 }

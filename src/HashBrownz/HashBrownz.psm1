@@ -1,6 +1,8 @@
 Set-StrictMode -Version 'Latest'
 
 $md5Algorithm = [Security.Cryptography.HashAlgorithm]::Create("MD5")
+$bytesInAKB = 1024
+$bytesInAMB = $bytesInAKB * 1024
 
 Function Convert-HBZBytesToHexString {
   [CmdletBinding()]
@@ -57,11 +59,12 @@ Function Get-HBZS3FileMultipartMD5Hash {
 Function Get-HBZS3FileMultipartMD5HashPartSize {
   [CmdletBinding()]
   Param([Parameter(Mandatory=$true)] [string]$path,
-        [Parameter(Mandatory=$true)] [string]$etag)
+        [Parameter(Mandatory=$true)] [string]$etag,
+        [Parameter(Mandatory=$false)] [int]$partSizeIncrementBytes = $bytesInAMB)
 
   $parts = [int]($etag -split '-')[1]
   $file = Get-ChildItem -LiteralPath $path
-  ([Math]::Ceiling($file.Length / $parts)) | Write-Output
+  (([Math]::Ceiling(($file.Length / $parts) / $partSizeIncrementBytes)) * $partSizeIncrementBytes) | Write-Output
 }
 
 Export-ModuleMember -Function *
