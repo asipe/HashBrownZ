@@ -74,15 +74,36 @@ Function ConvertFrom-HBZS3FileMultipartETag {
   $result | Write-Output
 }
 
-Function Get-HBZS3FileMultipartMD5HashPartSize {
+Function Get-HBZS3FileMultipartMD5HashPossiblePartSize {
   [CmdletBinding()]
   Param([Parameter(Mandatory=$true)] [string]$path,
         [Parameter(Mandatory=$true)] [string]$etag,
         [Parameter(Mandatory=$false)] [int]$partSizeIncrementBytes = $bytesInAMB)
 
-  $etagDetails = ConvertFrom-HBZS3FileMultipartETag -etag $etag
-  $file = Get-ChildItem -LiteralPath $path
-  (([Math]::Ceiling(($file.Length / $etagDetails.Parts) / $partSizeIncrementBytes)) * $partSizeIncrementBytes) | Write-Output
+  $parts = (ConvertFrom-HBZS3FileMultipartETag -etag $etag).Parts
+  $fileLength = (Get-ChildItem -LiteralPath $path).Length
+  $increment = 1
+
+  while ($true) {
+    $individualPartSize = $increment * $partSizeIncrementBytes
+    $totalPartSize = $individualPartSize * $parts
+    $fileLengthRemaining = $fileLength - $totalPartSize
+    $overage = $fileLengthRemaining + $individualPartSize
+
+    if (($fileLengthRemaining -le 0) -and ($overage -gt 0)) {
+      $individualPartSize | Write-Output
+
+      if ($parts -eq 1) {
+        break;
+      }
+    }
+
+    if ($overage -le 0) {
+      break;
+    }
+
+    $increment += 1
+  }
 }
 
 Export-ModuleMember -Function *

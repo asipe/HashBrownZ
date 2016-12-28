@@ -97,29 +97,43 @@ Describe 'ConvertFrom-HBZS3FileMultipartETag' {
   }
 }
 
-Describe 'Get-HBZS3FileMultipartMD5HashPartSize' {
-  Context 'usage' {
-    @(@('hello world', 'HASH-1', 1, 11),
-      @('hello world', 'HASH-3', 1, 4),
-      @('hello world hello world', 'HASH-3', 1, 8),
-      @('012345678901234567890123456789', 'HASH-3', 1, 10),
-      @('0123456789012345678901234567890', 'HASH-3', 1, 11),
-      @('012345678901234567890123456789', 'HASH-4', 1, 8),
-      @('0123456789012345678901234567890', 'HASH-4', 1, 8),
-      @('0123456789012345678901234567890', 'HASH-4', 2, 8),
-      @('0123456789012345678901234567890', 'HASH-4', 3, 9),
-      @('0123456789012345678901234567890', 'HASH-4', 4, 8),
-      @('0123456789012345678901234567890', 'HASH-4', 5, 10)) |
-      ForEach-Object {
-        It 'returns the part size in bytes for a file and etag' {
-          $path = Set-TestFileContent -Contents $_[0]
-          Get-HBZS3FileMultipartMD5HashPartSize -Path $path -ETag $_[1] -PartSizeIncrementBytes $_[2] | Should Be $_[3]
+InModuleScope HashBrownz {
+  Describe 'Get-HBZS3FileMultipartMD5HashPossiblePartSize' {
+    Context 'usage' {
+      @(@{FileLength = 1; Parts = 1; Increment = 1048576; Expected = @(1048576) },
+        @{FileLength = 1; Parts = 1; Increment = 1; Expected = @(1) },
+        @{FileLength = 200; Parts = 100; Increment = 1; Expected = @(2) },
+        @{FileLength = 200; Parts = 100; Increment = 2; Expected = @(2) },
+        @{FileLength = 1; Parts = 1; Increment = 2; Expected = @(2) },
+        @{FileLength = 2; Parts = 1; Increment = 1; Expected = @(2) },
+        @{FileLength = 30; Parts = 3; Increment = 1; Expected = @(10, 11, 12, 13, 14) },
+        @{FileLength = 30; Parts = 10; Increment = 1; Expected = @(3) },
+        @{FileLength = 12044840; Parts = 2; Increment = 1048576; Expected = @(6291456, 7340032, 8388608, 9437184, 10485760, 11534336) },
+        @{FileLength = 12044840; Parts = 3; Increment = 1048576; Expected = @(4194304, 5242880) },
+        @{FileLength = 12044840; Parts = 4; Increment = 1048576; Expected = @(3145728) },
+        @{FileLength = 100000000; Parts = 3; Increment = 1048576; Expected = @(33554432, 34603008, 35651584, 36700160, 37748736, 38797312, 39845888, 40894464, 41943040, 42991616, 44040192, 45088768, 46137344, 47185920, 48234496, 49283072) },
+        @{FileLength = 100000000; Parts = 4; Increment = 1048576; Expected = @(25165824, 26214400, 27262976, 28311552, 29360128, 30408704, 31457280, 32505856) },
+        @{FileLength = 16998803; Parts = 3; Increment = 1048576; Expected = @(6291456, 7340032, 8388608) },
+        @{FileLength = 16998803; Parts = 1; Increment = 1048576; Expected = @(17825792) },
+        @{FileLength = 1048576; Parts = 1; Increment = 1048576; Expected = @(1048576) },
+        @{FileLength = 1048576; Parts = 2; Increment = 1048576; Expected = @() },
+        @{FileLength = 100000000; Parts = 3; Increment = 50000000; Expected = @() },
+        @{FileLength = 100000000; Parts = 2; Increment = 50000000; Expected = @(50000000) }) |
+        ForEach-Object {
+          It 'returns the part size in bytes for a file and etag' {
+            $config = $_
+            $stubFile = @{ Length = 0 }
+            $stubFile.Length = $config.FileLength
+            Mock -CommandName Get-ChildItem -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($literalPath -eq 'c:\abc.txt') } -MockWith { $stubFile }
+            $actual = @(Get-HBZS3FileMultipartMD5HashPossiblePartSize -Path 'c:\abc.txt' -ETag "HASH-$($config.Parts)" -PartSizeIncrementBytes $config.Increment)
+  
+            for ($x = 0; $x -lt $config.Expected.Length; ++$x) {
+              $actual[$x] | Should Be $config.Expected[$x]
+            }
+            $actual.Length | Should Be $_.Expected.Length
+            Assert-VerifiableMocks 
+          }
         }
-      }
-
-    It 'uses a default partSizeIncrementBytes of 1 MB' {
-      $path = Set-TestFileContent -Contents 'hello world'
-      Get-HBZS3FileMultipartMD5HashPartSize -Path $path -ETag 'HASH-1' | Should Be (1024 * 1024)
     }
   }
 }
