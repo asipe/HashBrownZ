@@ -54,4 +54,14 @@ Function Get-HBZS3FileMultipartMD5Hash {
   '{0}-{1}' -f $hash,$parts | Write-Output
 }
 
+Function Get-HBZS3FileMultipartMD5HashPartSize {
+  [CmdletBinding()]
+  Param([Parameter(Mandatory=$true)] [string]$path,
+        [Parameter(Mandatory=$true)] [string]$etag)
+
+  $parts = [int]($etag -split '-')[1]
+  $file = Get-ChildItem -LiteralPath $path
+  ([Math]::Ceiling($file.Length / $parts)) | Write-Output
+}
+
 Export-ModuleMember -Function *
