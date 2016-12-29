@@ -144,4 +144,20 @@ Function Get-HBZS3ObjectMetaData {
   }
 }
 
+Function Find-HBZS3FileHash {
+  [CmdletBinding()]
+  Param([Parameter(Mandatory=$true)] [string]$path,
+        [Parameter(Mandatory=$true)] [AllowEmptyString()] [string]$etag) 
+
+  if (Test-HBZIsS3FileMultipartETag -ETag $etag) {
+    Get-HBZS3FileMultipartMD5HashPossiblePartSize -Path $path -ETag $etag |
+      ForEach-Object { Get-HBZS3FileMultipartMD5Hash -Path $path -PartSize $_ } |
+      Where-Object { $_ -eq $etag } |
+      Select-Object -First 1 |
+      Write-Output
+  } else {
+    Get-HBZS3FileMD5Hash -Path $path | Write-Output
+  }
+}
+
 Export-ModuleMember -Function *

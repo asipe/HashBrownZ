@@ -182,14 +182,79 @@ Describe 'Get-HBZS3ObjectMetaData' {
 
   Context 'usage' {
     It 'gets and returns s3 object meta data' {
-      Mock -CommandName Get-S3ObjectMetaData -ModuleName 'HashBrownz' -ParameterFilter { ($bucketName -eq 'invalidbucket') -and ($key -eq 'invalidkey') } -MockWith { 'metadata' }
+      Mock -CommandName Get-S3ObjectMetaData -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($bucketName -eq 'invalidbucket') -and ($key -eq 'invalidkey') } -MockWith { 'metadata' }
       Get-HBZS3ObjectMetaData -BucketName 'invalidbucket' -Key 'invalidkey' | Should Be 'metadata'
+      Assert-VerifiableMocks
     }
 
     It 'silences exceptions and returns null during meta data retrieval' {
-      Mock -CommandName Get-S3ObjectMetaData -ModuleName 'HashBrownz' -ParameterFilter { ($bucketName -eq 'invalidbucket') -and ($key -eq 'invalidkey') } -MockWith { throw 'test error' }
-      Mock -CommandName Write-Debug -ModuleName 'HashBrownz' -ParameterFilter { ($message -match 'test error') } 
+      Mock -CommandName Get-S3ObjectMetaData -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($bucketName -eq 'invalidbucket') -and ($key -eq 'invalidkey') } -MockWith { throw 'test error' }
+      Mock -CommandName Write-Debug -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($message -match 'test error') } 
       Get-HBZS3ObjectMetaData -BucketName 'invalidbucket' -Key 'invalidkey' | Should Be $null
+      Assert-VerifiableMocks
+    }
+  }
+}
+
+Describe 'Find-HBZS3FileHash' {
+  Context 'usage' {
+    It 'calculates a standard md5 hash if the etag is not multipart' {
+      Mock -CommandName Get-HBZS3FileMD5Hash -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($path -eq 'c:\data\f1.txt') } -MockWith { 'localhash' }
+      Find-HBZS3FileHash -Path 'c:\data\f1.txt' -ETag 'remotehash' | Should Be 'localhash'
+      Assert-VerifiableMocks
+    }
+
+    It 'calculates a standard md5 hash if the etag is empty' {
+      Mock -CommandName Get-HBZS3FileMD5Hash -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($path -eq 'c:\data\f1.txt') } -MockWith { 'localhash' }
+      Find-HBZS3FileHash -Path 'c:\data\f1.txt' -ETag '' | Should Be 'localhash'
+      Assert-VerifiableMocks
+    }
+
+    It 'returns null if the etag is multipart and gives no partsizes for the provided file' {
+      Mock -CommandName Get-HBZS3FileMultipartMD5HashPossiblePartSize -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($path -eq 'c:\data\f1.txt') -and ($etag -eq 'remotehash-1') } -MockWith { @() }
+      Find-HBZS3FileHash -Path 'c:\data\f1.txt' -ETag 'remotehash-1' | Should Be $null
+      Assert-VerifiableMocks
+    }
+
+    It 'returns null if the etag is multipart and no matching multipart hashes can be calculated (single partsize)' {
+      Mock -CommandName Get-HBZS3FileMultipartMD5HashPossiblePartSize -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($path -eq 'c:\data\f1.txt') -and ($etag -eq 'remotehash-1') } -MockWith { @(1) }
+      Mock -CommandName Get-HBZS3FileMultipartMD5Hash -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($path -eq 'c:\data\f1.txt') -and ($partSize -eq 1) } -MockWith { 'localhash-1' }
+      Find-HBZS3FileHash -Path 'c:\data\f1.txt' -ETag 'remotehash-1' | Should Be $null
+      Assert-VerifiableMocks
+    }
+
+    It 'returns null if the etag is multipart and no matching multipart hashes can be calculated (multiple partsizes)' {
+      Mock -CommandName Get-HBZS3FileMultipartMD5HashPossiblePartSize -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($path -eq 'c:\data\f1.txt') -and ($etag -eq 'remotehash-1') } -MockWith { @(1,2,3) }
+      Mock -CommandName Get-HBZS3FileMultipartMD5Hash -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($path -eq 'c:\data\f1.txt') -and ($partSize -eq 1) } -MockWith { 'localhash-1' }
+      Mock -CommandName Get-HBZS3FileMultipartMD5Hash -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($path -eq 'c:\data\f1.txt') -and ($partSize -eq 2) } -MockWith { 'localhash-2' }
+      Mock -CommandName Get-HBZS3FileMultipartMD5Hash -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($path -eq 'c:\data\f1.txt') -and ($partSize -eq 3) } -MockWith { 'localhash-3' }
+      Find-HBZS3FileHash -Path 'c:\data\f1.txt' -ETag 'remotehash-1' | Should Be $null
+      Assert-VerifiableMocks
+    }
+
+    It 'returns the multipart hash if the etag is multipart and a matching multipart has is found (single partsize)' {
+      Mock -CommandName Get-HBZS3FileMultipartMD5HashPossiblePartSize -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($path -eq 'c:\data\f1.txt') -and ($etag -eq 'remotehash-1') } -MockWith { @(2) }
+      Mock -CommandName Get-HBZS3FileMultipartMD5Hash -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($path -eq 'c:\data\f1.txt') -and ($partSize -eq 2) } -MockWith { 'remotehash-1' }
+      Find-HBZS3FileHash -Path 'c:\data\f1.txt' -ETag 'remotehash-1' | Should Be 'remotehash-1'
+      Assert-VerifiableMocks
+    }
+
+    It 'returns the multipart hash if the etag is multipart and a matching multipart has is found (multiple partsizes)' {
+      Mock -CommandName Get-HBZS3FileMultipartMD5HashPossiblePartSize -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($path -eq 'c:\data\f1.txt') -and ($etag -eq 'remotehash-1') } -MockWith { @(1,2,3) }
+      Mock -CommandName Get-HBZS3FileMultipartMD5Hash -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($path -eq 'c:\data\f1.txt') -and ($partSize -eq 1) } -MockWith { 'localhash-1' }
+      Mock -CommandName Get-HBZS3FileMultipartMD5Hash -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($path -eq 'c:\data\f1.txt') -and ($partSize -eq 2) } -MockWith { 'localhash-2' }
+      Mock -CommandName Get-HBZS3FileMultipartMD5Hash -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($path -eq 'c:\data\f1.txt') -and ($partSize -eq 3) } -MockWith { 'remotehash-1' }
+      Find-HBZS3FileHash -Path 'c:\data\f1.txt' -ETag 'remotehash-1' | Should Be 'remotehash-1'
+      Assert-VerifiableMocks
+    }
+
+    It 'stops calculating additional hashes once a multipart hash is matched' {
+      Mock -CommandName Get-HBZS3FileMultipartMD5HashPossiblePartSize -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($path -eq 'c:\data\f1.txt') -and ($etag -eq 'remotehash-1') } -MockWith { @(1,2,3) }
+      Mock -CommandName Get-HBZS3FileMultipartMD5Hash -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($path -eq 'c:\data\f1.txt') -and ($partSize -eq 1) } -MockWith { 'localhash-1' }
+      Mock -CommandName Get-HBZS3FileMultipartMD5Hash -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($path -eq 'c:\data\f1.txt') -and ($partSize -eq 2) } -MockWith { 'remotehash-1' }
+      Find-HBZS3FileHash -Path 'c:\data\f1.txt' -ETag 'remotehash-1' | Should Be 'remotehash-1'
+      Assert-VerifiableMocks
+      Assert-MockCalled -CommandName Get-HBZS3FileMultipartMD5Hash -ModuleName 'HashBrownz' -Scope It -Exactly -Times 2
     }
   }
 }
