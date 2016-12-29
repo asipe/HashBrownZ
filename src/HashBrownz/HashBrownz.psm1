@@ -144,6 +144,18 @@ Function Get-HBZS3ObjectMetaData {
   }
 }
 
+Function Get-HBZS3ObjectETag {
+  [CmdletBinding()]
+  Param([Parameter(Mandatory=$true)] [string]$bucketName,
+        [Parameter(Mandatory=$true)] [string]$key) 
+  
+  $meta = Get-HBZS3ObjectMetaData -BucketName $bucketName -Key $key
+
+  if ($null -ne $meta) {
+    $meta.ETag.Replace('"', '').ToUpper() | Write-Output
+  }
+}
+
 Function Find-HBZS3FileHash {
   [CmdletBinding()]
   Param([Parameter(Mandatory=$true)] [string]$path,

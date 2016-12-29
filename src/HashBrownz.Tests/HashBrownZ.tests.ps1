@@ -196,6 +196,27 @@ Describe 'Get-HBZS3ObjectMetaData' {
   }
 }
 
+
+Describe 'Get-HBZS3ObjectETag' {
+  BeforeEach {
+    Mock -CommandName Get-HBZS3ObjectMetaData -ModuleName 'HashBrownz' -ParameterFilter { $true } -MockWith { 'restricted method should not have been called' }
+  }
+
+  Context 'usage' {
+    It 'returns etag from object metadata' {
+      Mock -CommandName Get-HBZS3ObjectMetaData -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($bucketName -eq 'invalidbucket') -and ($key -eq 'invalidkey') } -MockWith { @{ ETag = '"aBc"' } }
+      Get-HBZS3ObjectETag -BucketName 'invalidbucket' -Key 'invalidkey' | Should Be 'ABC'
+      Assert-VerifiableMocks
+    }
+
+    It 'returns null it not metadata is available' {
+      Mock -CommandName Get-HBZS3ObjectMetaData -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($bucketName -eq 'invalidbucket') -and ($key -eq 'invalidkey') } -MockWith { $null }
+      Get-HBZS3ObjectETag -BucketName 'invalidbucket' -Key 'invalidkey' | Should Be $null
+      Assert-VerifiableMocks
+    }
+  }
+}
+
 Describe 'Find-HBZS3FileHash' {
   Context 'usage' {
     It 'calculates a standard md5 hash if the etag is not multipart' {
