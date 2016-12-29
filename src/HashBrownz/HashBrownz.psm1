@@ -108,9 +108,28 @@ Function Get-HBZS3FileMultipartMD5HashPossiblePartSize {
 
 Function Test-HBZIsS3FileMultipartETag {
   [CmdletBinding()]
-  Param([Parameter(Mandatory=$true)] $etag) 
+  Param([Parameter(Mandatory=$true)] [string]$etag) 
 
   $etag -match '-' | Write-Output
+}
+
+Function Get-HBZS3KeyForFile {
+  [CmdletBinding()]
+  Param([Parameter(Mandatory=$true)] [string]$localRoot,
+        [Parameter(Mandatory=$true)] [string]$filePath,
+        [Parameter(Mandatory=$true)] [AllowEmptyString()] [string]$prefix) 
+
+  if ($localRoot[-1] -ne '\') {
+    $localRoot += '\'
+  }
+
+  if (($prefix.Length -gt 0) -and ($prefix[-1] -ne '/')) {
+    $prefix += '/'
+  }
+
+  $key = $filePath -ireplace ([System.Text.RegularExpressions.Regex]::Escape($localRoot)),''
+  $key = $key.Replace('\', '/')
+  '{0}{1}' -f $prefix,$key | Write-Output
 }
 
 Export-ModuleMember -Function *

@@ -150,3 +150,23 @@ Describe 'Test-HBZIsS3FileMultipartETag' {
     }
   }
 }
+
+Describe 'Get-HBZS3KeyForFile' {
+  Context 'usage' {
+    @(@{Args=@{LocalRoot = 'c:\data'; FilePath = 'c:\data\one.txt'; Prefix = 'a'}; Expected = 'a/one.txt'},
+      @{Args=@{LocalRoot = 'C:\data'; FilePath = 'c:\data\one.txt'; Prefix = 'a'}; Expected = 'a/one.txt'},
+      @{Args=@{LocalRoot = 'c:\data\'; FilePath = 'c:\data\one.txt'; Prefix = 'a'}; Expected = 'a/one.txt'},
+      @{Args=@{LocalRoot = 'c:\data\'; FilePath = 'c:\data\one.txt'; Prefix = 'a/'}; Expected = 'a/one.txt'},
+      @{Args=@{LocalRoot = 'c:\data'; FilePath = 'c:\data\one.txt'; Prefix = 'a/b'}; Expected = 'a/b/one.txt'},
+      @{Args=@{LocalRoot = 'c:\data'; FilePath = 'c:\data\one.txt'; Prefix = 'a/b/'}; Expected = 'a/b/one.txt'},
+      @{Args=@{LocalRoot = 'c:\data'; FilePath = 'c:\data\one.txt'; Prefix = '/'}; Expected = '/one.txt'}
+      @{Args=@{LocalRoot = 'c:\data'; FilePath = 'c:\data\f1\one.txt'; Prefix = 'a'}; Expected = 'a/f1/one.txt'},
+      @{Args=@{LocalRoot = 'c:\data'; FilePath = 'c:\data\f1\f2\one.txt'; Prefix = 'a/b/c'}; Expected = 'a/b/c/f1/f2/one.txt'}) |
+      ForEach-Object {
+        It 'gets s3 key for a given file path' {
+          $myargs = $_.Args
+          Get-HBZS3KeyForFile @myargs | Should Be $_.Expected
+        }
+    }
+  }
+}
