@@ -172,4 +172,34 @@ Function Find-HBZS3FileHash {
   }
 }
 
+Function Compare-HBZFileToS3Object {
+  [CmdletBinding()]
+  Param([Parameter(Mandatory=$true)] [string]$localRoot,
+        [Parameter(Mandatory=$true, ValueFromPipeline=$true)] [object]$file,
+        [Parameter(Mandatory=$true)] [string]$bucketName,
+        [Parameter(Mandatory=$true)] [AllowEmptyString()] [string]$prefix) 
+
+  Process {
+    $path = $file.FullName
+    $key = Get-HBZS3KeyForFile -LocalRoot $localRoot -FilePath $path -Prefix $prefix
+    $s3ETag = $localETag = $error = $null
+
+    try {
+      $s3ETag = Get-HBZS3ObjectETag -BucketName $bucketName -Key $key 
+      $localETag = Find-HBZS3FileHash -Path $path -ETag $s3ETag
+    } catch {
+      $error = $_
+    }
+
+    [pscustomobject]@{
+      AreEqual = (($s3ETag -eq $localETag) -and (($null -ne $s3ETag) -and ($null -ne $localETag)))
+      LocalPath = $path
+      LocalETag = $localETag
+      S3Key = $key
+      S3ETag = $s3ETag
+      Error = $error
+    } | Write-Output
+  }
+}
+
 Export-ModuleMember -Function *
