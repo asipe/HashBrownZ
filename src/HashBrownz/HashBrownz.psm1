@@ -132,4 +132,16 @@ Function Get-HBZS3KeyForFile {
   '{0}{1}' -f $prefix,$key | Write-Output
 }
 
+Function Get-HBZS3ObjectMetaData {
+  [CmdletBinding()]
+  Param([Parameter(Mandatory=$true)] [string]$bucketName,
+        [Parameter(Mandatory=$true)] [string]$key) 
+  
+  try {
+    Get-S3ObjectMetaData -BucketName $bucketName -Key $key | Write-Output
+  } catch {
+    Write-Debug -Message $_
+  }
+}
+
 Export-ModuleMember -Function *

@@ -174,3 +174,22 @@ Describe 'Get-HBZS3KeyForFile' {
     }
   }
 }
+
+Describe 'Get-HBZS3ObjectMetaData' {
+  BeforeEach {
+    Mock -CommandName Get-S3ObjectMetaData -ModuleName 'HashBrownz' -ParameterFilter { $true } -MockWith { 'restricted method should not have been called' }
+  }
+
+  Context 'usage' {
+    It 'gets and returns s3 object meta data' {
+      Mock -CommandName Get-S3ObjectMetaData -ModuleName 'HashBrownz' -ParameterFilter { ($bucketName -eq 'invalidbucket') -and ($key -eq 'invalidkey') } -MockWith { 'metadata' }
+      Get-HBZS3ObjectMetaData -BucketName 'invalidbucket' -Key 'invalidkey' | Should Be 'metadata'
+    }
+
+    It 'silences exceptions and returns null during meta data retrieval' {
+      Mock -CommandName Get-S3ObjectMetaData -ModuleName 'HashBrownz' -ParameterFilter { ($bucketName -eq 'invalidbucket') -and ($key -eq 'invalidkey') } -MockWith { throw 'test error' }
+      Mock -CommandName Write-Debug -ModuleName 'HashBrownz' -ParameterFilter { ($message -match 'test error') } 
+      Get-HBZS3ObjectMetaData -BucketName 'invalidbucket' -Key 'invalidkey' | Should Be $null
+    }
+  }
+}
