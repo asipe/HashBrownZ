@@ -148,6 +148,10 @@ Describe 'Test-HBZIsS3FileMultipartETag' {
     It 'returns false if etag is not in s3 multiepart format' {
       Test-HBZIsS3FileMultipartETag -ETag 'HASH' | Should Be $false
     }
+
+    It 'returns false if etag is an empty string' {
+      Test-HBZIsS3FileMultipartETag -ETag '' | Should Be $false
+    }
   }
 }
 

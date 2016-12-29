@@ -108,7 +108,7 @@ Function Get-HBZS3FileMultipartMD5HashPossiblePartSize {
 
 Function Test-HBZIsS3FileMultipartETag {
   [CmdletBinding()]
-  Param([Parameter(Mandatory=$true)] [string]$etag) 
+  Param([Parameter(Mandatory=$true)] [AllowEmptyString()] [string]$etag) 
 
   $etag -match '-' | Write-Output
 }
