@@ -8,19 +8,6 @@ $emptyS3ObjectData = [pscustomobject]@{
   ContentLength = $null
 }
 
-Function Suspend-HBZPipeline {
-  [CmdletBinding()]
-  Param([Parameter(Mandatory=$true, ValueFromPipeline=$true)] [AllowNull()] [object]$data,
-        [Parameter(Mandatory=$true)] [int]$milliseconds) 
-
-  Process {
-    if ($milliseconds -gt 0) {
-      Start-Sleep -Milliseconds $milliseconds
-    }
-    $data | Write-Output
-  }
-}
-
 Function Convert-HBZBytesToHexString {
   [CmdletBinding()]
   Param([Parameter(Mandatory=$true)] [AllowEmptyCollection()] [byte[]]$bytes)
@@ -202,11 +189,9 @@ Function Compare-HBZFileToS3Object {
   Param([Parameter(Mandatory=$true)] [string]$localRoot,
         [Parameter(Mandatory=$true, ValueFromPipeline=$true)] [object]$file,
         [Parameter(Mandatory=$true)] [string]$bucketName,
-        [Parameter(Mandatory=$true)] [AllowEmptyString()] [string]$prefix,
-        [Parameter(Mandatory=$false)] [int]$perItemMillisecondDelay = 0) 
+        [Parameter(Mandatory=$true)] [AllowEmptyString()] [string]$prefix) 
 
   Process {
-    $null | Suspend-HBZPipeline -Milliseconds $perItemMillisecondDelay | Out-Null
     $localPath = $file.FullName
     $localLength = $file.Length
     $areEqual = $false

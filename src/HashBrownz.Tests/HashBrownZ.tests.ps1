@@ -408,60 +408,6 @@ InModuleScope HashBrownz {
         Compare-Result $actual $expected
         Assert-VerifiableMocks
       }
-  
-      It 'sleeps before processing an item if perItemMillisecondDelay is set' {
-        Mock -CommandName Get-HBZS3ObjectData -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($bucketName -eq 'bucket1') -and ($key -eq 'a/b/abc.txt') } -MockWith { Get-S3ObjectData 'hash1' 1000 }
-        Mock -CommandName Find-HBZS3FileHash -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($path -eq 'c:\data\abc.txt') -and ($etag -eq 'hash1') } -MockWith { 'hash1' }
-        Mock -CommandName Start-Sleep -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($milliseconds -eq 500) }
-        $actual = $file | Compare-HBZFileToS3Object -LocalRoot 'c:\data' -BucketName 'bucket1' -Prefix 'a/b' -PerItemMillisecondDelay 500
-        Compare-Result $actual $expected
-        Assert-VerifiableMocks
-      }
     }
   }
 }
-
-Describe 'Suspend-HBZPipeline' {
-  Context 'usage' {
-    It 'sleeps and writes data to pipeline' {
-      Mock -CommandName Start-Sleep -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($milliseconds -eq 10) }
-      'abc' | Suspend-HBZPipeline -Milliseconds 10 | Should Be 'abc'
-      Assert-VerifiableMocks
-    }
-
-    It 'works with null data' {
-      Mock -CommandName Start-Sleep -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($milliseconds -eq 10) }
-      $null | Suspend-HBZPipeline -Milliseconds 10 | Should Be $null
-      Assert-VerifiableMocks
-    }
-
-    It 'does not sleep if milliseconds is zero' {
-      Mock -CommandName Start-Sleep -ModuleName 'HashBrownz'
-      'abc' | Suspend-HBZPipeline -Milliseconds 0 | Should Be 'abc'
-      Assert-MockCalled -CommandName Start-Sleep -ModuleName 'HashBrownz' -Exactly -Times 0 -Scope It
-    }
-
-    It 'does not sleep if milliseconds is less than zero' {
-      Mock -CommandName Start-Sleep -ModuleName 'HashBrownz'
-      'abc' | Suspend-HBZPipeline -Milliseconds -5 | Should Be 'abc'
-      Assert-MockCalled -CommandName Start-Sleep -ModuleName 'HashBrownz' -Exactly -Times 0 -Scope It
-    } 
-  }
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
