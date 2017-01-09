@@ -4,6 +4,19 @@ $md5Algorithm = [Security.Cryptography.HashAlgorithm]::Create("MD5")
 $bytesInAKB = 1024
 $bytesInAMB = $bytesInAKB * 1024
 
+Function Suspend-HBZPipeline {
+  [CmdletBinding()]
+  Param([Parameter(Mandatory=$true, ValueFromPipeline=$true)] [object]$data,
+         [Parameter(Mandatory=$true)] [int]$milliseconds) 
+
+  Process {
+    if ($milliseconds -gt 0) {
+      Start-Sleep -Milliseconds $milliseconds
+    }
+    $data | Write-Output
+  }
+}
+
 Function Convert-HBZBytesToHexString {
   [CmdletBinding()]
   Param([Parameter(Mandatory=$true)] [AllowEmptyCollection()] [byte[]]$bytes)

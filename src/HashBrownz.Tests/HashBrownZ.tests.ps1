@@ -375,9 +375,48 @@ Describe 'Compare-HBZFileToS3Object' {
       $expected.AreEqual = $false
       $expected.LocalETag = $null
       $expected.S3ETag = $null
-      $expected.Error = 'test error'
+    $expected.Error = 'test error'
       Compare-Result $actual $expected
       Assert-VerifiableMocks
     }
   }
 }
+
+Describe 'Suspend-HBZPipeline' {
+  Context 'usage' {
+    It 'sleeps and writes data to pipeline' {
+      Mock -CommandName Start-Sleep -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($milliseconds -eq 10) }
+      'abc' | Suspend-HBZPipeline -Milliseconds 10 | Should Be 'abc'
+      Assert-VerifiableMocks
+    }
+
+    It 'does not sleep if milliseconds is zero' {
+      Mock -CommandName Start-Sleep -ModuleName 'HashBrownz'
+      'abc' | Suspend-HBZPipeline -Milliseconds 0 | Should Be 'abc'
+      Assert-MockCalled -CommandName Start-Sleep -ModuleName 'HashBrownz' -Exactly -Times 0 -Scope It
+    }
+
+    It 'does not sleep if milliseconds is less than zero' {
+      Mock -CommandName Start-Sleep -ModuleName 'HashBrownz'
+      'abc' | Suspend-HBZPipeline -Milliseconds -5 | Should Be 'abc'
+      Assert-MockCalled -CommandName Start-Sleep -ModuleName 'HashBrownz' -Exactly -Times 0 -Scope It
+    } 
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
