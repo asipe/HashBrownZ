@@ -3,6 +3,10 @@ Set-StrictMode -Version 'Latest'
 $md5Algorithm = [Security.Cryptography.HashAlgorithm]::Create("MD5")
 $bytesInAKB = 1024
 $bytesInAMB = $bytesInAKB * 1024
+$emptyS3ObjectData = [pscustomobject]@{
+  ETag = $null
+  ContentLength = $null
+}
 
 Function Suspend-HBZPipeline {
   [CmdletBinding()]
@@ -203,25 +207,35 @@ Function Compare-HBZFileToS3Object {
 
   Process {
     $null | Suspend-HBZPipeline -Milliseconds $perItemMillisecondDelay | Out-Null
-    $path = $file.FullName
-    $s3ObjectData = $s3ETag = $localETag = $error = $null
+    $localPath = $file.FullName
+    $localLength = $file.Length
+    $areEqual = $false
+    $localETag = $currentError = $null
+    $s3ObjectData = $emptyS3ObjectData
 
     try {
-      $key = Get-HBZS3KeyForFile -LocalRoot $localRoot -FilePath $path -Prefix $prefix
+      $key = Get-HBZS3KeyForFile -LocalRoot $localRoot -FilePath $localPath -Prefix $prefix
       $s3ObjectData = Get-HBZS3ObjectData -BucketName $bucketName -Key $key 
-      $s3ETag = $s3ObjectData.ETag
-      $localETag = Find-HBZS3FileHash -Path $path -ETag $s3ETag
+
+      if ($s3ObjectData.ContentLength -eq $localLength) {
+        $localETag = Find-HBZS3FileHash -Path $localPath -ETag $s3ObjectData.ETag
+      } 
+
+      $areEqual = (($s3ObjectData.ContentLength -eq $localLength) -and 
+                   (($s3ObjectData.ETag -eq $localETag) -and (($null -ne $s3ObjectData.ETag) -and ($null -ne $localETag))))
     } catch {
-      $error = $_
+      $currentError = $_
     }
 
     [pscustomobject]@{
-      AreEqual = (($s3ETag -eq $localETag) -and (($null -ne $s3ETag) -and ($null -ne $localETag)))
-      LocalPath = $path
+      AreEqual = $areEqual
+      LocalPath = $localPath
       LocalETag = $localETag
+      LocalLength = $localLength
       S3Key = $key
-      S3ETag = $s3ETag
-      Error = $error
+      S3ETag = $s3ObjectData.ETag
+      S3Length = $s3ObjectData.ContentLength
+      Error = $currentError
     } | Write-Output
   }
 }

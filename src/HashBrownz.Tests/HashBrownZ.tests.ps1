@@ -293,13 +293,16 @@ InModuleScope HashBrownz {
       BeforeEach {
         $file = @{ 
           FullName = 'c:\data\abc.txt'
+          Length = 1000
         }
         $expected = @{
           AreEqual = $true
           LocalPath = 'c:\data\abc.txt'
           LocalETag = 'hash1'
+          LocalLength = 1000
           S3Key = 'a/b/abc.txt'
           S3ETag = 'hash1'
+          S3Length = 1000
           Error = $null
         }
       }
@@ -308,19 +311,34 @@ InModuleScope HashBrownz {
         $actual.AreEqual | Should Be $expected.AreEqual
         $actual.LocalPath | Should Be $expected.LocalPath
         $actual.LocalETag | Should Be $expected.LocalETag
+        $actual.LocalLength | Should Be $expected.LocalLength
         $actual.S3Key | Should Be $expected.S3Key
         $actual.S3ETag | Should Be $expected.S3ETag
+        $actual.S3Length | Should Be $expected.S3LEngth
         ([string]$actual.Error) | Should Be ([string]$expected.Error)
       }
   
-      Function Get-S3ObjectData($etag) {
+      Function Get-S3ObjectData($etag, $contentLength) {
         [pscustomobject]@{
           ETag = $etag
+          ContentLength = $contentLength
         } | Write-Output
       }
-  
+
+      It 'gives correct result when lengths are not equal' {
+        Mock -CommandName Get-HBZS3ObjectData -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($bucketName -eq 'bucket1') -and ($key -eq 'a/b/abc.txt') } -MockWith { Get-S3ObjectData 'hash1' 500 }
+        Mock -CommandName Find-HBZS3FileHash -ModuleName 'HashBrownz'
+        $actual = $file | Compare-HBZFileToS3Object -LocalRoot 'c:\data' -BucketName 'bucket1' -Prefix 'a/b' 
+        $expected.AreEqual = $false
+        $expected.S3Length = 500
+        $expected.LocalETag = $null
+        Compare-Result $actual $expected
+        Assert-VerifiableMocks
+        Assert-MockCalled -CommandName 'Find-HBZS3FileHash' -ModuleName 'HashBrownz' -Times 0 -Exactly -Scope It
+      }
+
       It 'gives correct result when hashes are equal' {
-        Mock -CommandName Get-HBZS3ObjectData -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($bucketName -eq 'bucket1') -and ($key -eq 'a/b/abc.txt') } -MockWith { Get-S3ObjectData 'hash1' }
+        Mock -CommandName Get-HBZS3ObjectData -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($bucketName -eq 'bucket1') -and ($key -eq 'a/b/abc.txt') } -MockWith { Get-S3ObjectData 'hash1' 1000 }
         Mock -CommandName Find-HBZS3FileHash -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($path -eq 'c:\data\abc.txt') -and ($etag -eq 'hash1') } -MockWith { 'hash1' }
         $actual = $file | Compare-HBZFileToS3Object -LocalRoot 'c:\data' -BucketName 'bucket1' -Prefix 'a/b' 
         Compare-Result $actual $expected
@@ -328,7 +346,7 @@ InModuleScope HashBrownz {
       }
       
       It 'gives correct result when hashes are not equal' {
-        Mock -CommandName Get-HBZS3ObjectData -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($bucketName -eq 'bucket1') -and ($key -eq 'a/b/abc.txt') } -MockWith { Get-S3ObjectData 'hash1' }
+        Mock -CommandName Get-HBZS3ObjectData -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($bucketName -eq 'bucket1') -and ($key -eq 'a/b/abc.txt') } -MockWith { Get-S3ObjectData 'hash1' 1000 }
         Mock -CommandName Find-HBZS3FileHash -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($path -eq 'c:\data\abc.txt') -and ($etag -eq 'hash1') } -MockWith { 'hash2' }
         $actual = $file | Compare-HBZFileToS3Object -LocalRoot 'c:\data' -BucketName 'bucket1' -Prefix 'a/b' 
         $expected.AreEqual = $false
@@ -338,7 +356,7 @@ InModuleScope HashBrownz {
       }
   
       It 'gives correct result when s3 etag cannot be found' {
-        Mock -CommandName Get-HBZS3ObjectData -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($bucketName -eq 'bucket1') -and ($key -eq 'a/b/abc.txt') } -MockWith { Get-S3ObjectData $null }
+        Mock -CommandName Get-HBZS3ObjectData -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($bucketName -eq 'bucket1') -and ($key -eq 'a/b/abc.txt') } -MockWith { Get-S3ObjectData $null 1000 }
         Mock -CommandName Find-HBZS3FileHash -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($path -eq 'c:\data\abc.txt') -and ($etag -eq '') } -MockWith { 'hash1' }
         $actual = $file | Compare-HBZFileToS3Object -LocalRoot 'c:\data' -BucketName 'bucket1' -Prefix 'a/b' 
         $expected.AreEqual = $false
@@ -348,7 +366,7 @@ InModuleScope HashBrownz {
       }
   
       It 'gives correct result when local etag cannot be found' {
-        Mock -CommandName Get-HBZS3ObjectData -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($bucketName -eq 'bucket1') -and ($key -eq 'a/b/abc.txt') } -MockWith { Get-S3ObjectData 'hash1' }
+        Mock -CommandName Get-HBZS3ObjectData -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($bucketName -eq 'bucket1') -and ($key -eq 'a/b/abc.txt') } -MockWith { Get-S3ObjectData 'hash1' 1000 }
         Mock -CommandName Find-HBZS3FileHash -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($path -eq 'c:\data\abc.txt') -and ($etag -eq 'hash1') } -MockWith { $null }
         $actual = $file | Compare-HBZFileToS3Object -LocalRoot 'c:\data' -BucketName 'bucket1' -Prefix 'a/b' 
         $expected.AreEqual = $false
@@ -358,7 +376,7 @@ InModuleScope HashBrownz {
       }
       
       It 'gives correct result when neither etag can be found' {
-        Mock -CommandName Get-HBZS3ObjectData -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($bucketName -eq 'bucket1') -and ($key -eq 'a/b/abc.txt') } -MockWith { Get-S3ObjectData $null }
+        Mock -CommandName Get-HBZS3ObjectData -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($bucketName -eq 'bucket1') -and ($key -eq 'a/b/abc.txt') } -MockWith { Get-S3ObjectData $null 1000 }
         Mock -CommandName Find-HBZS3FileHash -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($path -eq 'c:\data\abc.txt') -and ($etag -eq '') } -MockWith { $null }
         $actual = $file | Compare-HBZFileToS3Object -LocalRoot 'c:\data' -BucketName 'bucket1' -Prefix 'a/b' 
         $expected.AreEqual = $false
@@ -369,7 +387,7 @@ InModuleScope HashBrownz {
       }
   
       It 'gives correct result with Error when exception is thrown retrieving local etag' {
-        Mock -CommandName Get-HBZS3ObjectData -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($bucketName -eq 'bucket1') -and ($key -eq 'a/b/abc.txt') } -MockWith { Get-S3ObjectData 'hash1' }
+        Mock -CommandName Get-HBZS3ObjectData -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($bucketName -eq 'bucket1') -and ($key -eq 'a/b/abc.txt') } -MockWith { Get-S3ObjectData 'hash1' 1000 }
         Mock -CommandName Find-HBZS3FileHash -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($path -eq 'c:\data\abc.txt') -and ($etag -eq 'hash1') } -MockWith { throw 'test error' }
         $actual = $file | Compare-HBZFileToS3Object -LocalRoot 'c:\data' -BucketName 'bucket1' -Prefix 'a/b'
         $expected.AreEqual = $false
@@ -379,19 +397,20 @@ InModuleScope HashBrownz {
         Assert-VerifiableMocks
       }
   
-      It 'gives correct result with Error when exception is thrown retrieving s3 etag' {
+      It 'gives correct result with Error when exception is thrown retrieving s3 object data' {
         Mock -CommandName Get-HBZS3ObjectData -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($bucketName -eq 'bucket1') -and ($key -eq 'a/b/abc.txt') } -MockWith { throw 'test error' }
         $actual = $file | Compare-HBZFileToS3Object -LocalRoot 'c:\data' -BucketName 'bucket1' -Prefix 'a/b'
         $expected.AreEqual = $false
         $expected.LocalETag = $null
         $expected.S3ETag = $null
+        $expected.S3Length = $null
         $expected.Error = 'test error'
         Compare-Result $actual $expected
         Assert-VerifiableMocks
       }
   
       It 'sleeps before processing an item if perItemMillisecondDelay is set' {
-        Mock -CommandName Get-HBZS3ObjectData -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($bucketName -eq 'bucket1') -and ($key -eq 'a/b/abc.txt') } -MockWith { Get-S3ObjectData 'hash1' }
+        Mock -CommandName Get-HBZS3ObjectData -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($bucketName -eq 'bucket1') -and ($key -eq 'a/b/abc.txt') } -MockWith { Get-S3ObjectData 'hash1' 1000 }
         Mock -CommandName Find-HBZS3FileHash -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($path -eq 'c:\data\abc.txt') -and ($etag -eq 'hash1') } -MockWith { 'hash1' }
         Mock -CommandName Start-Sleep -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($milliseconds -eq 500) }
         $actual = $file | Compare-HBZFileToS3Object -LocalRoot 'c:\data' -BucketName 'bucket1' -Prefix 'a/b' -PerItemMillisecondDelay 500
