@@ -166,10 +166,12 @@ Function Get-HBZS3ObjectData {
 
   $result = [pscustomobject]@{
     ETag = $null
+    ContentLength = $null
   }
 
   if ($null -ne $meta) {
     $result.ETag = $meta.ETag.Replace('"', '').ToUpper()
+    $result.ContentLength = $meta.ContentLength
   }
 
   $result | Write-Output

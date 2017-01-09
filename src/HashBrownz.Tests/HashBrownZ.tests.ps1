@@ -203,16 +203,18 @@ Describe 'Get-HBZS3ObjectData' {
 
   Context 'usage' {
     It 'returns object data from object metadata' {
-      Mock -CommandName Get-HBZS3ObjectMetaData -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($bucketName -eq 'invalidbucket') -and ($key -eq 'invalidkey') } -MockWith { @{ ETag = '"aBc"' } }
+      Mock -CommandName Get-HBZS3ObjectMetaData -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($bucketName -eq 'invalidbucket') -and ($key -eq 'invalidkey') } -MockWith { @{ ETag = '"aBc"'; ContentLength = 10; } }
       $actual = Get-HBZS3ObjectData -BucketName 'invalidbucket' -Key 'invalidkey'
       $actual.ETag | Should Be 'ABC'
+      $actual.ContentLength | Should Be 10
       Assert-VerifiableMocks
     }
 
-    It 'returns null data if metadata cannot be retrieved' {
+    It 'returns null properties in result if metadata cannot be retrieved' {
       Mock -CommandName Get-HBZS3ObjectMetaData -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($bucketName -eq 'invalidbucket') -and ($key -eq 'invalidkey') } -MockWith { $null }
       $actual = Get-HBZS3ObjectData -BucketName 'invalidbucket' -Key 'invalidkey'
       $actual.ETag | Should Be $null
+      $actual.ContentLength | Should Be $null
       Assert-VerifiableMocks
     }
   }
