@@ -164,9 +164,15 @@ Function Get-HBZS3ObjectData {
   
   $meta = Get-HBZS3ObjectMetaData -BucketName $bucketName -Key $key
 
-  if ($null -ne $meta) {
-    $meta.ETag.Replace('"', '').ToUpper() | Write-Output
+  $result = [pscustomobject]@{
+    ETag = $null
   }
+
+  if ($null -ne $meta) {
+    $result.ETag = $meta.ETag.Replace('"', '').ToUpper()
+  }
+
+  $result | Write-Output
 }
 
 Function Find-HBZS3FileHash {
@@ -196,11 +202,12 @@ Function Compare-HBZFileToS3Object {
   Process {
     $null | Suspend-HBZPipeline -Milliseconds $perItemMillisecondDelay | Out-Null
     $path = $file.FullName
-    $s3ETag = $localETag = $error = $null
+    $s3ObjectData = $s3ETag = $localETag = $error = $null
 
     try {
       $key = Get-HBZS3KeyForFile -LocalRoot $localRoot -FilePath $path -Prefix $prefix
-      $s3ETag = Get-HBZS3ObjectData -BucketName $bucketName -Key $key 
+      $s3ObjectData = Get-HBZS3ObjectData -BucketName $bucketName -Key $key 
+      $s3ETag = $s3ObjectData.ETag
       $localETag = Find-HBZS3FileHash -Path $path -ETag $s3ETag
     } catch {
       $error = $_
