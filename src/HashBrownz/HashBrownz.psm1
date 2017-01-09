@@ -157,7 +157,7 @@ Function Get-HBZS3ObjectMetaData {
   }
 }
 
-Function Get-HBZS3ObjectETag {
+Function Get-HBZS3ObjectData {
   [CmdletBinding()]
   Param([Parameter(Mandatory=$true)] [string]$bucketName,
         [Parameter(Mandatory=$true)] [string]$key) 
@@ -200,7 +200,7 @@ Function Compare-HBZFileToS3Object {
 
     try {
       $key = Get-HBZS3KeyForFile -LocalRoot $localRoot -FilePath $path -Prefix $prefix
-      $s3ETag = Get-HBZS3ObjectETag -BucketName $bucketName -Key $key 
+      $s3ETag = Get-HBZS3ObjectData -BucketName $bucketName -Key $key 
       $localETag = Find-HBZS3FileHash -Path $path -ETag $s3ETag
     } catch {
       $error = $_
