@@ -375,7 +375,16 @@ Describe 'Compare-HBZFileToS3Object' {
       $expected.AreEqual = $false
       $expected.LocalETag = $null
       $expected.S3ETag = $null
-    $expected.Error = 'test error'
+      $expected.Error = 'test error'
+      Compare-Result $actual $expected
+      Assert-VerifiableMocks
+    }
+
+    It 'sleeps before processing an item if perItemMillisecondDelay is set' {
+      Mock -CommandName Get-HBZS3ObjectETag -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($bucketName -eq 'bucket1') -and ($key -eq 'a/b/abc.txt') } -MockWith { 'hash1' }
+      Mock -CommandName Find-HBZS3FileHash -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($path -eq 'c:\data\abc.txt') -and ($etag -eq 'hash1') } -MockWith { 'hash1' }
+      Mock -CommandName Start-Sleep -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($milliseconds -eq 500) }
+      $actual = $file | Compare-HBZFileToS3Object -LocalRoot 'c:\data' -BucketName 'bucket1' -Prefix 'a/b' -PerItemMillisecondDelay 500
       Compare-Result $actual $expected
       Assert-VerifiableMocks
     }
@@ -387,6 +396,12 @@ Describe 'Suspend-HBZPipeline' {
     It 'sleeps and writes data to pipeline' {
       Mock -CommandName Start-Sleep -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($milliseconds -eq 10) }
       'abc' | Suspend-HBZPipeline -Milliseconds 10 | Should Be 'abc'
+      Assert-VerifiableMocks
+    }
+
+    It 'works with null data' {
+      Mock -CommandName Start-Sleep -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($milliseconds -eq 10) }
+      $null | Suspend-HBZPipeline -Milliseconds 10 | Should Be $null
       Assert-VerifiableMocks
     }
 

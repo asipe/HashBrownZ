@@ -6,8 +6,8 @@ $bytesInAMB = $bytesInAKB * 1024
 
 Function Suspend-HBZPipeline {
   [CmdletBinding()]
-  Param([Parameter(Mandatory=$true, ValueFromPipeline=$true)] [object]$data,
-         [Parameter(Mandatory=$true)] [int]$milliseconds) 
+  Param([Parameter(Mandatory=$true, ValueFromPipeline=$true)] [AllowNull()] [object]$data,
+        [Parameter(Mandatory=$true)] [int]$milliseconds) 
 
   Process {
     if ($milliseconds -gt 0) {
@@ -190,9 +190,11 @@ Function Compare-HBZFileToS3Object {
   Param([Parameter(Mandatory=$true)] [string]$localRoot,
         [Parameter(Mandatory=$true, ValueFromPipeline=$true)] [object]$file,
         [Parameter(Mandatory=$true)] [string]$bucketName,
-        [Parameter(Mandatory=$true)] [AllowEmptyString()] [string]$prefix) 
+        [Parameter(Mandatory=$true)] [AllowEmptyString()] [string]$prefix,
+        [Parameter(Mandatory=$false)] [int]$perItemMillisecondDelay = 0) 
 
   Process {
+    $null | Suspend-HBZPipeline -Milliseconds $perItemMillisecondDelay | Out-Null
     $path = $file.FullName
     $key = Get-HBZS3KeyForFile -LocalRoot $localRoot -FilePath $path -Prefix $prefix
     $s3ETag = $localETag = $error = $null
