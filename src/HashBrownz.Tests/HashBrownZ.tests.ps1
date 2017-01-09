@@ -411,3 +411,70 @@ InModuleScope HashBrownz {
     }
   }
 }
+
+Describe 'Get-HBZPathForS3Key' {
+  Context 'usage' {
+    @(@{Args=@{LocalRoot = 'c:\data'; S3Key = 'storage1/one.txt'; Prefix = 'storage1'}; Expected = 'c:\data\one.txt'},
+      @{Args=@{LocalRoot = 'c:\data'; S3Key = 'storage1/one.txt'; Prefix = ''}; Expected = 'c:\data\storage1\one.txt'},
+      @{Args=@{LocalRoot = 'c:\data'; S3Key = 'storage1/storage2/one.txt'; Prefix = 'storage1'}; Expected = 'c:\data\storage2\one.txt'},
+      @{Args=@{LocalRoot = 'c:\data'; S3Key = '/storage1/storage2/one.txt'; Prefix = 'storage1'}; Expected = 'c:\data\storage2\one.txt'},
+      @{Args=@{LocalRoot = 'c:\data\'; S3Key = 'storage1/storage2/one.txt'; Prefix = 'storage1'}; Expected = 'c:\data\storage2\one.txt'},
+      @{Args=@{LocalRoot = 'c:\data'; S3Key = 'storage1/storage2/one.txt'; Prefix = '/storage1'}; Expected = 'c:\data\storage2\one.txt'},
+      @{Args=@{LocalRoot = 'c:\data'; S3Key = 'storage1/storage2/one.txt'; Prefix = 'storage1/storage2'}; Expected = 'c:\data\one.txt'},
+      @{Args=@{LocalRoot = 'c:\data\'; S3Key = '/storage1/storage2/one.txt'; Prefix = '/storage1/storage2'}; Expected = 'c:\data\one.txt'}) |
+      ForEach-Object {
+        It 'gets local path for a given s3 key and root' {
+          $myargs = $_.Args
+          Get-HBZPathForS3Key @myargs | Should Be $_.Expected
+        }
+    }
+  }
+}
+
+Describe 'Test-HBZFileForS3Object' {
+  Context 'usage' {
+    BeforeEach {
+      $s3Object = @{
+        Key = 'part1/test.txt'
+      }
+
+      $localRoot = Join-Path $TestDrive 'data'
+      $localFilePath = Join-Path $localRoot 'test.txt'
+
+      New-Item -Path $localRoot -ItemType Directory | Out-Null
+      Add-Content -Path $localFilePath -Value '' -Force
+    }
+
+    AfterEach {
+      if (Test-Path $localRoot -PathType Container) {
+        Remove-Item -Path $localRoot -Recurse -Force
+      }
+    }
+
+    It 'tests local file exists' {
+      $actual = $s3Object | Test-HBZFileForS3Object -LocalRoot $localRoot -Prefix 'part1'
+      $actual.Exists | Should Be $true
+      $actual.S3Key | Should Be 'part1/test.txt'
+      $actual.LocalPath | Should Be $localFilePath
+    }
+
+    It 'tests local file does not exist' {
+      Remove-Item -Path $localFilePath -Force
+      $actual = $s3Object | Test-HBZFileForS3Object -LocalRoot $localRoot -Prefix 'part1'
+      $actual.Exists | Should Be $false
+      $actual.S3Key | Should Be 'part1/test.txt'
+      $actual.LocalPath | Should Be $localFilePath
+    }
+
+    It 'tests local directory does not exist' {
+      Remove-Item -Path $localRoot -Recurse -Force
+      $actual = $s3Object | Test-HBZFileForS3Object -LocalRoot $localRoot -Prefix 'part1'
+      $actual.Exists | Should Be $false
+      $actual.S3Key | Should Be 'part1/test.txt'
+      $actual.LocalPath | Should Be $localFilePath
+    } 
+  }
+}
+
+
+

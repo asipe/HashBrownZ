@@ -136,6 +136,21 @@ Function Get-HBZS3KeyForFile {
   '{0}{1}' -f $prefix,$key | Write-Output
 }
 
+Function Get-HBZPathForS3Key {
+  [CmdletBinding()]
+  Param([Parameter(Mandatory=$true)] [string]$localRoot,
+        [Parameter(Mandatory=$true)] [AllowEmptyString()] [string]$prefix,
+        [Parameter(Mandatory=$true)] [string]$s3Key)
+  $path = $s3Key
+  $prefix = $prefix -replace '^/',''
+  if ($prefix.Length -gt 0) {
+    $path = $s3Key.Replace($prefix,'')
+  }
+  $path = $path.Replace('/','\')
+  $path = $path -replace '^\\',''
+  Join-Path $localRoot $path | Write-Output
+}
+
 Function Get-HBZS3ObjectMetaData {
   [CmdletBinding()]
   Param([Parameter(Mandatory=$true)] [string]$bucketName,
@@ -221,6 +236,23 @@ Function Compare-HBZFileToS3Object {
       S3ETag = $s3ObjectData.ETag
       S3Length = $s3ObjectData.ContentLength
       Error = $currentError
+    } | Write-Output
+  }
+}
+
+Function Test-HBZFileForS3Object {
+  [CmdletBinding()]
+  Param([Parameter(Mandatory=$true, ValueFromPipeline=$true)] [object]$s3Object,
+        [Parameter(Mandatory=$true)] [string]$localRoot,
+        [Parameter(Mandatory=$true)] [string]$prefix)
+
+  Process {
+    $path = Get-HBZPathForS3Key -LocalRoot $localRoot -Prefix $prefix -S3Key $s3Object.Key
+
+    [pscustomobject]@{
+      Exists = Test-Path $path
+      S3Key = $s3Object.Key
+      LocalPath = $path
     } | Write-Output
   }
 }
