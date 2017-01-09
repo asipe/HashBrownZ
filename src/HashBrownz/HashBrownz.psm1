@@ -196,10 +196,10 @@ Function Compare-HBZFileToS3Object {
   Process {
     $null | Suspend-HBZPipeline -Milliseconds $perItemMillisecondDelay | Out-Null
     $path = $file.FullName
-    $key = Get-HBZS3KeyForFile -LocalRoot $localRoot -FilePath $path -Prefix $prefix
     $s3ETag = $localETag = $error = $null
 
     try {
+      $key = Get-HBZS3KeyForFile -LocalRoot $localRoot -FilePath $path -Prefix $prefix
       $s3ETag = Get-HBZS3ObjectETag -BucketName $bucketName -Key $key 
       $localETag = Find-HBZS3FileHash -Path $path -ETag $s3ETag
     } catch {
