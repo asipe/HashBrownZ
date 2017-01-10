@@ -187,10 +187,17 @@ Describe 'Get-HBZS3ObjectMetaData' {
       Assert-VerifiableMocks
     }
 
-    It 'silences exceptions and returns null during meta data retrieval' {
+    It 'silences 404 exceptions and returns null during meta data retrieval' {
+      Mock -CommandName Get-S3ObjectMetaData -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($bucketName -eq 'invalidbucket') -and ($key -eq 'invalidkey') } -MockWith { throw 'Get-S3ObjectMetaData : Error making request with Error Code NotFound and Http Status Code NotFound. No further error information was returned by the service.' }
+      Mock -CommandName Write-Debug -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($message -match 'Error making request with Error') } 
+      Get-HBZS3ObjectMetaData -BucketName 'invalidbucket' -Key 'invalidkey' | Should Be $null
+      Assert-VerifiableMocks
+    }
+
+    It 'throws other exceptions' {
       Mock -CommandName Get-S3ObjectMetaData -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($bucketName -eq 'invalidbucket') -and ($key -eq 'invalidkey') } -MockWith { throw 'test error' }
       Mock -CommandName Write-Debug -ModuleName 'HashBrownz' -Verifiable -ParameterFilter { ($message -match 'test error') } 
-      Get-HBZS3ObjectMetaData -BucketName 'invalidbucket' -Key 'invalidkey' | Should Be $null
+      { Get-HBZS3ObjectMetaData -BucketName 'invalidbucket' -Key 'invalidkey' | Should Be $null } | Should Throw 'test error'
       Assert-VerifiableMocks
     }
   }
@@ -297,6 +304,7 @@ InModuleScope HashBrownz {
         }
         $expected = @{
           AreEqual = $true
+          Status = 'SAME'
           LocalPath = 'c:\data\abc.txt'
           LocalETag = 'hash1'
           LocalLength = 1000
@@ -309,6 +317,7 @@ InModuleScope HashBrownz {
   
       Function Compare-Result($actual, $expected) {
         $actual.AreEqual | Should Be $expected.AreEqual
+        $actual.Status | Should Be $expected.STatus
         $actual.LocalPath | Should Be $expected.LocalPath
         $actual.LocalETag | Should Be $expected.LocalETag
         $actual.LocalLength | Should Be $expected.LocalLength
@@ -332,6 +341,7 @@ InModuleScope HashBrownz {
         $expected.AreEqual = $false
         $expected.S3Length = 500
         $expected.LocalETag = $null
+        $expected.Status = 'DIFFERENT'
         Compare-Result $actual $expected
         Assert-VerifiableMocks
         Assert-MockCalled -CommandName 'Find-HBZS3FileHash' -ModuleName 'HashBrownz' -Times 0 -Exactly -Scope It
@@ -351,6 +361,7 @@ InModuleScope HashBrownz {
         $actual = $file | Compare-HBZFileToS3Object -LocalRoot 'c:\data' -BucketName 'bucket1' -Prefix 'a/b' 
         $expected.AreEqual = $false
         $expected.LocalETag = 'hash2'
+        $expected.Status = 'DIFFERENT'
         Compare-Result $actual $expected
         Assert-VerifiableMocks
       }
@@ -361,6 +372,7 @@ InModuleScope HashBrownz {
         $actual = $file | Compare-HBZFileToS3Object -LocalRoot 'c:\data' -BucketName 'bucket1' -Prefix 'a/b' 
         $expected.AreEqual = $false
         $expected.S3ETag = $null
+        $expected.Status = 'MISSINGS3'
         Compare-Result $actual $expected
         Assert-VerifiableMocks
       }
@@ -371,6 +383,7 @@ InModuleScope HashBrownz {
         $actual = $file | Compare-HBZFileToS3Object -LocalRoot 'c:\data' -BucketName 'bucket1' -Prefix 'a/b' 
         $expected.AreEqual = $false
         $expected.LocalETag = $null
+        $expected.Status = 'DIFFERENT'
         Compare-Result $actual $expected
         Assert-VerifiableMocks
       }
@@ -382,6 +395,7 @@ InModuleScope HashBrownz {
         $expected.AreEqual = $false
         $expected.LocalETag = $null
         $expected.S3ETag = $null
+        $expected.Status = 'MISSINGS3'
         Compare-Result $actual $expected
         Assert-VerifiableMocks
       }
@@ -393,6 +407,7 @@ InModuleScope HashBrownz {
         $expected.AreEqual = $false
         $expected.LocalETag = $null
         $expected.Error = 'test error'
+        $expected.Status = 'ERROR'
         Compare-Result $actual $expected
         Assert-VerifiableMocks
       }
@@ -405,6 +420,7 @@ InModuleScope HashBrownz {
         $expected.S3ETag = $null
         $expected.S3Length = $null
         $expected.Error = 'test error'
+        $expected.Status = 'ERROR'
         Compare-Result $actual $expected
         Assert-VerifiableMocks
       }
@@ -476,5 +492,23 @@ Describe 'Test-HBZFileForS3Object' {
   }
 }
 
+Describe 'Get-HBZResultStatus' {
+  Context 'usage' {
+    @(@($true, $null, 'etag', 'SAME'),
+      @($false, $null, 'etag', 'DIFFERENT'),
+      @($false, $null, '', 'MISSINGS3'),
+      @($false, $null, $null, 'MISSINGS3'),
+      @($true, $null, '', 'MISSINGS3'),
+      @($true, $null, $null, 'MISSINGS3'),
+      @($false, 'error', $null, 'ERROR'),
+      @($true, 'error', $null, 'ERROR'),
+      @($true, 'error', 'etag', 'ERROR')) | 
+      ForEach-Object {
+        It 'gets result status' {
+          Get-HBZResultStatus -AreEqual $_[0] -CurrentError $_[1] -S3ETag $_[2] | Should Be $_[3]
+        }
+      }
+  }
+}
 
 

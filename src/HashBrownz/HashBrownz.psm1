@@ -159,7 +159,11 @@ Function Get-HBZS3ObjectMetaData {
   try {
     Get-S3ObjectMetaData -BucketName $bucketName -Key $key | Write-Output
   } catch {
-    Write-Debug -Message $_
+    $msg = $_.ToString()
+    Write-Debug -Message $msg
+    if ($msg -notmatch 'Http Status Code NotFound') {
+      throw $msg
+    }
   }
 }
 
@@ -199,6 +203,25 @@ Function Find-HBZS3FileHash {
   }
 }
 
+Function Get-HBZResultStatus {
+  [CmdletBinding()]
+  Param([Parameter(Mandatory=$true)] [bool]$areEqual,
+        [Parameter(Mandatory=$true)] [AllowNull()] [object]$currentError,
+        [Parameter(Mandatory=$true)] [AllowNull()] [AllowEmptyString()] [string]$s3ETag)
+
+    $status = 'SAME'
+
+    if ($null -ne $currentError) {
+      $status = 'ERROR'
+    } elseif (($null -eq $s3ETag) -or ('' -eq $s3ETag)) {
+      $status = 'MISSINGS3'
+    } elseif (!$areEqual) {
+      $status = 'DIFFERENT'
+    }
+
+    $status | Write-Output
+}
+
 Function Compare-HBZFileToS3Object {
   [CmdletBinding()]
   Param([Parameter(Mandatory=$true)] [string]$localRoot,
@@ -229,6 +252,7 @@ Function Compare-HBZFileToS3Object {
 
     [pscustomobject]@{
       AreEqual = $areEqual
+      Status = Get-HBZResultStatus -AreEqual $areEqual -CurrentError $currentError -S3ETag $s3objectData.ETag
       LocalPath = $localPath
       LocalETag = $localETag
       LocalLength = $localLength
